@@ -14,17 +14,17 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.JingSDK = void 0;
-class JingSDK {
+exports.JingCashSDK = void 0;
+class JingCashSDK {
     constructor(config) {
-        this.apiUrl = config.API_URL;
-        this.apiKey = config.API_KEY;
+        this.API_HOST = config.API_HOST;
+        this.API_KEY = config.API_KEY;
     }
     async fetch(endpoint) {
-        const response = await fetch(`${this.apiUrl}${endpoint}`, {
+        const response = await fetch(`${this.API_HOST}${endpoint}`, {
             headers: {
-                Authorization: `Bearer ${this.apiKey}`,
-                "X-API-Key": this.apiKey,
+                Authorization: `Bearer ${this.API_KEY}`,
+                "X-API-Key": this.API_KEY,
             },
         });
         if (!response.ok) {
@@ -39,24 +39,21 @@ class JingSDK {
         ]);
         return {
             bids: bidsResponse.results
-                .filter((bid) => bid.status === "open")
-                .map(this.formatOrderBookEntry)
-                .sort((a, b) => b.price - a.price),
+                .filter((bid) => bid.status === "open" && bid.open)
+                .sort((a, b) => b.ustx / b.amount - a.ustx / a.amount),
             asks: asksResponse.results
-                .filter((ask) => ask.status === "open")
-                .map(this.formatOrderBookEntry)
-                .sort((a, b) => a.price - b.price),
+                .filter((ask) => ask.status === "open" && ask.open)
+                .sort((a, b) => a.ustx / a.amount - b.ustx / b.amount),
         };
     }
-    formatOrderBookEntry(entry) {
-        return {
-            id: entry.id,
-            amount: entry.amount,
-            ustx: entry.ustx,
-            price: entry.ustx / entry.amount,
-            status: entry.status,
-        };
+    async getPrivateOffers(pair, userAddress, ftContract) {
+        const response = await this.fetch(`/token-pairs/${pair}/private-offers?userAddress=${userAddress}&ftContract=${ftContract}`);
+        return response;
+    }
+    async getUserOffers(pair, userAddress, ftContract) {
+        const response = await this.fetch(`/token-pairs/${pair}/user-offers?userAddress=${userAddress}&ftContract=${ftContract}`);
+        return response;
     }
 }
-exports.JingSDK = JingSDK;
+exports.JingCashSDK = JingCashSDK;
 __exportStar(require("./types"), exports);
