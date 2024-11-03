@@ -14,7 +14,7 @@ Before using the Jingcash SDK, you need to set up your environment variables. Cr
 
 ```bash
 # API host will be provided by Jingcash
-JING_API_URL=<api_url>
+JING_API_HOST=<api_url>
 # API key will be provided by Jingcash
 JING_API_KEY=<api_key>
 ```
@@ -28,7 +28,7 @@ import { JingcashSDK } from "@jingcash/core-sdk";
 
 // Initialize the SDK
 const jingcash = new JingcashSDK({
-  API_HOST: process.env.JING_API_URL,
+  API_HOST: process.env.JING_API_HOST,
   API_KEY: process.env.JING_API_KEY,
 });
 

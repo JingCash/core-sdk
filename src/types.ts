@@ -1,5 +1,5 @@
 export interface JingSDKConfig {
-  API_URL: string;
+  API_HOST: string;
   API_KEY: string;
 }
 
