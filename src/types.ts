@@ -10,7 +10,8 @@ export type StxAskStatus =
   | "open"
   | "cancelling"
   | "processing"
-  | "re-pricing";
+  | "re-pricing"
+  | "private";
 
 export type StxBidStatus =
   | "make-bid"
@@ -19,7 +20,8 @@ export type StxBidStatus =
   | "open"
   | "cancelling"
   | "processing"
-  | "re-pricing";
+  | "re-pricing"
+  | "private";
 
 export interface StxAsk {
   id: number;
@@ -81,4 +83,8 @@ export interface PrivateOffersResponse {
 export interface UserOffersResponse {
   userBids: StacksBid[];
   userAsks: StxAsk[];
+}
+
+export interface PendingOffersResponse {
+  results: (StxAsk | StacksBid)[];
 }

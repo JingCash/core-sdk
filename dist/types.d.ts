@@ -2,8 +2,8 @@ export interface JingSDKConfig {
     API_HOST: string;
     API_KEY: string;
 }
-export type StxAskStatus = "make-ask" | "take-ask" | "done" | "open" | "cancelling" | "processing" | "re-pricing";
-export type StxBidStatus = "make-bid" | "take-bid" | "done" | "open" | "cancelling" | "processing" | "re-pricing";
+export type StxAskStatus = "make-ask" | "take-ask" | "done" | "open" | "cancelling" | "processing" | "re-pricing" | "private";
+export type StxBidStatus = "make-bid" | "take-bid" | "done" | "open" | "cancelling" | "processing" | "re-pricing" | "private";
 export interface StxAsk {
     id: number;
     in_contract: string;
@@ -59,4 +59,7 @@ export interface PrivateOffersResponse {
 export interface UserOffersResponse {
     userBids: StacksBid[];
     userAsks: StxAsk[];
+}
+export interface PendingOffersResponse {
+    results: (StxAsk | StacksBid)[];
 }

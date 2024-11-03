@@ -6,6 +6,9 @@ import {
   ApiResponse,
   StxAsk,
   StacksBid,
+  PendingOffersResponse,
+  StxAskStatus,
+  StxBidStatus,
 } from "./types";
 import { getTokenInfo, getSupportedPairs } from "./token-utils";
 
@@ -81,5 +84,35 @@ export class JingCashSDK {
     return this.fetch<UserOffersResponse>(
       `/token-pairs/${pair}/user-offers?userAddress=${userAddress}&ftContract=${ftContract}`
     );
+  }
+
+  async getPendingOrders(
+    page: number = 1,
+    limit: number = 50
+  ): Promise<PendingOffersResponse> {
+    try {
+      const response = await this.fetch<ApiResponse<StxAsk | StacksBid>>(
+        `/all-pending-stx-swaps?page=${page}&limit=${limit}`
+      );
+
+      // The backend already filters for open/private status and sorts by when
+      return {
+        results: response.results
+          .filter(
+            (order) => order.status === "open" || order.status === "private"
+          )
+          .sort((a, b) => {
+            const dateA = new Date(a.processedAt || 0).getTime();
+            const dateB = new Date(b.processedAt || 0).getTime();
+            return dateB - dateA;
+          }),
+      };
+    } catch (error) {
+      throw new Error(
+        `Failed to fetch pending orders: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
+    }
   }
 }

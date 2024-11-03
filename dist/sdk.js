@@ -52,5 +52,23 @@ class JingCashSDK {
         const ftContract = `${tokenInfo.contractAddress}.${tokenInfo.contractName}`;
         return this.fetch(`/token-pairs/${pair}/user-offers?userAddress=${userAddress}&ftContract=${ftContract}`);
     }
+    async getPendingOrders(page = 1, limit = 50) {
+        try {
+            const response = await this.fetch(`/all-pending-stx-swaps?page=${page}&limit=${limit}`);
+            // The backend already filters for open/private status and sorts by when
+            return {
+                results: response.results
+                    .filter((order) => order.status === "open" || order.status === "private")
+                    .sort((a, b) => {
+                    const dateA = new Date(a.processedAt || 0).getTime();
+                    const dateB = new Date(b.processedAt || 0).getTime();
+                    return dateB - dateA;
+                }),
+            };
+        }
+        catch (error) {
+            throw new Error(`Failed to fetch pending orders: ${error instanceof Error ? error.message : "Unknown error"}`);
+        }
+    }
 }
 exports.JingCashSDK = JingCashSDK;

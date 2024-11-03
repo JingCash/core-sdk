@@ -1,4 +1,4 @@
-import { OrderBook, PrivateOffersResponse, UserOffersResponse } from "./types";
+import { OrderBook, PrivateOffersResponse, UserOffersResponse, PendingOffersResponse } from "./types";
 export declare class JingCashSDK {
     private readonly API_HOST;
     private readonly API_KEY;
@@ -10,4 +10,5 @@ export declare class JingCashSDK {
     getOrderBook(pair: string): Promise<OrderBook>;
     getPrivateOffers(pair: string, userAddress: string): Promise<PrivateOffersResponse>;
     getUserOffers(pair: string, userAddress: string): Promise<UserOffersResponse>;
+    getPendingOrders(page?: number, limit?: number): Promise<PendingOffersResponse>;
 }
