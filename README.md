@@ -8,6 +8,19 @@ SDK for interacting with [Jing.Cash](https://app.jing.cash) DEX (Decentralized E
 npm install @jingcash/core-sdk
 ```
 
+## Configuration
+
+Before using the Jingcash SDK, you need to set up your environment variables. Create a .env file in your project root with the following variables:
+
+```bash
+# API host will be provided by Jingcash
+JING_API_URL=<api_url>
+# API key will be provided by Jingcash
+JING_API_KEY=<api_key>
+```
+
+Contact Jingcash team for access to the API.
+
 ## Usage
 
 ```typescript
@@ -15,8 +28,8 @@ import { JingcashSDK } from "@jingcash/core-sdk";
 
 // Initialize the SDK
 const jingcash = new JingcashSDK({
-  API_HOST: process.env.JING_API_URL, // e.g., "https://backend-neon-ecru.vercel.app/api"
-  API_KEY: process.env.JING_API_KEY, // e.g., "dev-api-token"
+  API_HOST: process.env.JING_API_URL,
+  API_KEY: process.env.JING_API_KEY,
 });
 
 // Get order book for a trading pair
