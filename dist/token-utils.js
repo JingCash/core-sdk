@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getTokenInfo = getTokenInfo;
 exports.getSupportedPairs = getSupportedPairs;
 exports.getTokenSymbol = getTokenSymbol;
+exports.getMarketPair = getMarketPair;
 exports.calculateBidFees = calculateBidFees;
 exports.calculateAskFees = calculateAskFees;
 exports.toMicroUnits = toMicroUnits;
@@ -27,10 +28,21 @@ function getSupportedPairs() {
     return Object.keys(constants_1.TokenMap).map((symbol) => `${symbol}-STX`);
 }
 function getTokenSymbol(ft) {
+    if (!ft)
+        return "Unknown";
     const [contractAddress, contractNameWithToken] = ft.split(".");
-    const contractName = contractNameWithToken.split("::")[0];
+    const contractName = contractNameWithToken?.split("::")[0];
     const fullFt = Object.keys(constants_1.TokenMapInverse).find((key) => key.startsWith(`${contractAddress}.${contractName}`));
     return fullFt ? constants_1.TokenMapInverse[fullFt] : "Unknown Token";
+}
+function getMarketPair(contract) {
+    if (!contract)
+        return "UNKNOWN-STX";
+    const [contractAddress, contractNameWithToken] = contract.split(".");
+    const contractName = contractNameWithToken?.split("::")[0];
+    const fullFt = Object.keys(constants_1.TokenMapInverse).find((key) => key.startsWith(`${contractAddress}.${contractName}`));
+    const symbol = fullFt ? constants_1.TokenMapInverse[fullFt] : "UNKNOWN";
+    return `${symbol}-STX`;
 }
 // Fee calculation utilities
 function calculateBidFees(ustx) {

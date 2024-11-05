@@ -7,6 +7,7 @@ export interface TokenInfo {
 export declare function getTokenInfo(pairString: string): TokenInfo | null;
 export declare function getSupportedPairs(): string[];
 export declare function getTokenSymbol(ft: string): string;
+export declare function getMarketPair(contract: string): string;
 export declare function calculateBidFees(ustx: number): number;
 export declare function calculateAskFees(amount: number): number;
 export declare function toMicroUnits(amount: number, decimals: number): number;

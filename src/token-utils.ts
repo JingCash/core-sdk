@@ -28,12 +28,24 @@ export function getSupportedPairs(): string[] {
 }
 
 export function getTokenSymbol(ft: string): string {
+  if (!ft) return "Unknown";
   const [contractAddress, contractNameWithToken] = ft.split(".");
-  const contractName = contractNameWithToken.split("::")[0];
+  const contractName = contractNameWithToken?.split("::")[0];
   const fullFt = Object.keys(TokenMapInverse).find((key) =>
     key.startsWith(`${contractAddress}.${contractName}`)
   );
   return fullFt ? TokenMapInverse[fullFt] : "Unknown Token";
+}
+
+export function getMarketPair(contract: string): string {
+  if (!contract) return "UNKNOWN-STX";
+  const [contractAddress, contractNameWithToken] = contract.split(".");
+  const contractName = contractNameWithToken?.split("::")[0];
+  const fullFt = Object.keys(TokenMapInverse).find((key) =>
+    key.startsWith(`${contractAddress}.${contractName}`)
+  );
+  const symbol = fullFt ? TokenMapInverse[fullFt] : "UNKNOWN";
+  return `${symbol}-STX`;
 }
 
 // Fee calculation utilities

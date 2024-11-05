@@ -88,3 +88,19 @@ export interface UserOffersResponse {
 export interface PendingOffersResponse {
   results: (StxAsk | StacksBid)[];
 }
+
+export interface DisplayOrder extends StxAsk {
+  type: string;
+  market: string;
+  displayAmount: string;
+  displayPrice: string;
+}
+
+export interface DisplayBid extends StacksBid {
+  type: string;
+  market: string;
+  displayAmount: string;
+  displayPrice: string;
+}
+
+export type FormattedOrder = DisplayOrder | DisplayBid;
