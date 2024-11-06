@@ -1,0 +1,6 @@
+{
+  "title": "PostConditionType",
+  "description": "",
+  "type": "string",
+  "enum": ["stx", "non_fungible", "fungible"]
+}

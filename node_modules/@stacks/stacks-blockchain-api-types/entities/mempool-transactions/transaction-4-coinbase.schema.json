@@ -1,0 +1,13 @@
+{
+  "type": "object",
+  "title": "MempoolCoinbaseTransaction",
+  "description": "Describes representation of a Type 3 Stacks 2.0 transaction: Poison Microblock",
+  "allOf": [
+    {
+      "$ref": "./abstract-transaction.schema.json"
+    },
+    {
+      "$ref": "../transactions/transaction-4-coinbase-metadata.schema.json"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "title": "BnsFetchHistoricalZoneFileResponse",
+  "description": "Fetches the historical zonefile specified by the username and zone hash.",
+  "anyOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "zonefile": { "type": "string" }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "error": { "type": "string" }
+      }
+    }
+  ]
+}

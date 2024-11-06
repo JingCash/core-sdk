@@ -1,3 +1,5 @@
+import { NetworkType } from "./network";
+export declare function getTokenDecimals(tokenInfo: TokenInfo, network: NetworkType, senderAddress: string): Promise<number>;
 export interface TokenInfo {
     ft: string;
     contractAddress: string;

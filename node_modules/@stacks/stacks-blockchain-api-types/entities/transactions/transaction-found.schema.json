@@ -1,0 +1,23 @@
+{
+  "type": "object",
+  "title": "TransactionFound",
+  "description": "This object returns transaction for found true",
+  "additionalProperties": false,
+  "required": ["found", "result"],
+  "properties": {
+    "found": {
+      "type": "boolean",
+      "enum": [true]
+    },
+    "result": {
+      "anyOf":[
+        {
+          "$ref": "../mempool-transactions/transaction.schema.json"
+        },
+        {
+          "$ref": "./transaction.schema.json"
+        }
+      ]
+    }
+  }
+}

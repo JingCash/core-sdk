@@ -1,4 +1,17 @@
 import {
+  makeContractCall,
+  broadcastTransaction,
+  AnchorMode,
+  PostConditionMode,
+  FungibleConditionCode,
+  uintCV,
+  someCV,
+  noneCV,
+  standardPrincipalCV,
+  contractPrincipalCV,
+  makeStandardSTXPostCondition,
+} from "@stacks/transactions";
+import type {
   JingSDKConfig,
   OrderBook,
   PrivateOffersResponse,
@@ -12,19 +25,32 @@ import {
 import {
   getTokenInfo,
   getSupportedPairs,
-  getMarketPair,
   fromMicroUnits,
   getTokenSymbol,
+  getTokenDecimals,
+  calculateBidFees,
+  TokenInfo,
 } from "./token-utils";
-import { STX_DECIMALS } from "./constants";
+import { JING_CONTRACTS, STX_DECIMALS } from "./constants";
+import {
+  NetworkType,
+  validateNetwork,
+  getNetwork,
+  getNextNonce,
+} from "./network";
+import { deriveChildAccount } from "./account";
 
 export class JingCashSDK {
   private readonly API_HOST: string;
   private readonly API_KEY: string;
+  private readonly defaultAddress: string;
+  private readonly network: NetworkType;
 
-  constructor(config: { API_HOST: string; API_KEY: string }) {
+  constructor(config: JingSDKConfig) {
     this.API_HOST = config.API_HOST;
     this.API_KEY = config.API_KEY;
+    this.defaultAddress = config.defaultAddress;
+    this.network = validateNetwork(config.network);
   }
 
   private async fetch<T>(endpoint: string): Promise<T> {
@@ -42,24 +68,7 @@ export class JingCashSDK {
     return response.json() as Promise<T>;
   }
 
-  // private formatAmount(amount: number, decimals: number): string {
-  //   return (amount / Math.pow(10, decimals)).toString();
-  // }
-
-  // private formatPrice(
-  //   ustx: number,
-  //   amount: number,
-  //   inDecimals: number,
-  //   outDecimals: number
-  // ): string {
-  //   return (
-  //     ustx /
-  //     (amount * Math.pow(10, outDecimals - inDecimals))
-  //   ).toString();
-  // }
-
   private isStxAsk(order: StxAsk | StacksBid): order is StxAsk {
-    // If out_contract is "STX", it's an Ask
     return order.out_contract === "STX";
   }
 
@@ -67,7 +76,6 @@ export class JingCashSDK {
     order: StxAsk | StacksBid
   ): DisplayOrder | DisplayBid {
     if (this.isStxAsk(order)) {
-      // ASK: Selling tokens for STX (out_contract is STX)
       const tokenAmount = fromMicroUnits(order.amount, order.in_decimals);
       const stxAmount = fromMicroUnits(order.ustx, STX_DECIMALS);
       const tokenSymbol = getTokenSymbol(order.in_contract);
@@ -77,13 +85,13 @@ export class JingCashSDK {
         type: "Ask",
         market: `${tokenSymbol}/STX`,
         displayAmount: `${tokenAmount.toString()} ${tokenSymbol}`,
+        displayStxAmount: `${stxAmount.toString()} STX`,
         displayPrice: `${(
           stxAmount / tokenAmount
-        ).toString()} STX/${tokenSymbol}`, // Changed to STX/Token
+        ).toString()} STX/${tokenSymbol}`,
       };
       return displayOrder;
     } else {
-      // BID: Buying tokens with STX (in_contract is STX)
       const tokenAmount = fromMicroUnits(order.amount, order.out_decimals);
       const stxAmount = fromMicroUnits(order.ustx, STX_DECIMALS);
       const tokenSymbol = getTokenSymbol(order.out_contract);
@@ -93,9 +101,10 @@ export class JingCashSDK {
         type: "Bid",
         market: `${tokenSymbol}/STX`,
         displayAmount: `${tokenAmount.toString()} ${tokenSymbol}`,
+        displayStxAmount: `${stxAmount.toString()} STX`,
         displayPrice: `${(
           stxAmount / tokenAmount
-        ).toString()} STX/${tokenSymbol}`, // Changed to STX/Token
+        ).toString()} STX/${tokenSymbol}`,
       };
       return displayBid;
     }
@@ -121,9 +130,7 @@ export class JingCashSDK {
           return dateB - dateA;
         });
 
-      return {
-        results: formattedResults,
-      };
+      return { results: formattedResults };
     } catch (error) {
       throw new Error(
         `Failed to fetch pending orders: ${
@@ -133,7 +140,6 @@ export class JingCashSDK {
     }
   }
 
-  // Other methods remain the same...
   async getOrderBook(pair: string): Promise<OrderBook> {
     if (!getSupportedPairs().includes(pair)) {
       throw new Error(`Unsupported trading pair: ${pair}`);
@@ -182,5 +188,114 @@ export class JingCashSDK {
     return this.fetch<UserOffersResponse>(
       `/token-pairs/${pair}/user-offers?userAddress=${userAddress}&ftContract=${ftContract}`
     );
+  }
+
+  async createBidOffer({
+    pair,
+    stxAmount,
+    tokenAmount,
+    gasFee,
+    recipient,
+    expiry,
+    accountIndex = 0,
+    mnemonic,
+  }: {
+    pair: string;
+    stxAmount: number;
+    tokenAmount: number;
+    gasFee: number;
+    recipient?: string;
+    expiry?: number;
+    accountIndex?: number;
+    mnemonic: string;
+  }) {
+    if (!getSupportedPairs().includes(pair)) {
+      throw new Error(`Unsupported trading pair: ${pair}`);
+    }
+
+    const tokenInfo = getTokenInfo(pair);
+    if (!tokenInfo) {
+      throw new Error(`Failed to get token info for pair: ${pair}`);
+    }
+
+    const tokenDecimals = await getTokenDecimals(
+      tokenInfo,
+      this.network,
+      this.defaultAddress
+    );
+
+    const ustx = Math.floor(stxAmount * 1_000_000);
+    const microTokenAmount = Math.floor(
+      tokenAmount * Math.pow(10, tokenDecimals)
+    );
+
+    const networkObj = getNetwork(this.network);
+    const { address, key } = await deriveChildAccount(
+      this.network,
+      mnemonic,
+      accountIndex
+    );
+    const nonce = await getNextNonce(this.network, address);
+
+    const fees = calculateBidFees(ustx);
+
+    const txOptions = {
+      contractAddress: JING_CONTRACTS.BID.address,
+      contractName: JING_CONTRACTS.BID.name,
+      functionName: "offer",
+      functionArgs: [
+        uintCV(ustx),
+        uintCV(microTokenAmount),
+        recipient ? someCV(standardPrincipalCV(recipient)) : noneCV(),
+        contractPrincipalCV(tokenInfo.contractAddress, tokenInfo.contractName),
+        contractPrincipalCV(
+          JING_CONTRACTS.YIN.address,
+          JING_CONTRACTS.YIN.name
+        ),
+        expiry ? someCV(uintCV(expiry)) : noneCV(),
+      ],
+      senderKey: key,
+      validateWithAbi: true,
+      network: networkObj,
+      anchorMode: AnchorMode.Any,
+      postConditionMode: PostConditionMode.Deny,
+      postConditions: [
+        makeStandardSTXPostCondition(
+          address,
+          FungibleConditionCode.LessEqual,
+          ustx + fees
+        ),
+      ],
+      nonce,
+      fee: gasFee,
+    };
+
+    try {
+      const transaction = await makeContractCall(txOptions);
+      const broadcastResponse = await broadcastTransaction(
+        transaction,
+        networkObj
+      );
+
+      return {
+        txid: broadcastResponse.txid,
+        details: {
+          pair,
+          stxAmount,
+          tokenAmount,
+          fees: fees / 1_000_000,
+          gasFee: gasFee / 1_000_000,
+          recipient,
+          expiry,
+          address,
+        },
+      };
+    } catch (error) {
+      throw new Error(
+        `Failed to create bid offer: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
+    }
   }
 }

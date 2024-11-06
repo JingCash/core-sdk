@@ -1,6 +1,8 @@
 export interface JingSDKConfig {
     API_HOST: string;
     API_KEY: string;
+    defaultAddress: string;
+    network: string;
 }
 export type StxAskStatus = "make-ask" | "take-ask" | "done" | "open" | "cancelling" | "processing" | "re-pricing" | "private";
 export type StxBidStatus = "make-bid" | "take-bid" | "done" | "open" | "cancelling" | "processing" | "re-pricing" | "private";
@@ -67,12 +69,14 @@ export interface DisplayOrder extends StxAsk {
     type: string;
     market: string;
     displayAmount: string;
+    displayStxAmount: string;
     displayPrice: string;
 }
 export interface DisplayBid extends StacksBid {
     type: string;
     market: string;
     displayAmount: string;
+    displayStxAmount: string;
     displayPrice: string;
 }
 export type FormattedOrder = DisplayOrder | DisplayBid;

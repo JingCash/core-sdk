@@ -1,0 +1,14 @@
+{
+  "type": "object",
+  "title": "TransactionList",
+  "additionalProperties": {
+    "anyOf": [
+      {
+        "$ref": "./transaction-found.schema.json"
+      },
+      {
+        "$ref": "./transaction-not-found.schema.json"
+      }
+    ]
+  }
+}

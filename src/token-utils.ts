@@ -1,5 +1,96 @@
 import { TokenMap, TokenMapInverse, STX_DECIMALS } from "./constants";
+import {
+  NetworkType,
+  getNetwork,
+  callReadOnlyFunction,
+  cvToJSON,
+} from "./network";
 
+export async function getTokenDecimals(
+  tokenInfo: TokenInfo,
+  network: NetworkType,
+  senderAddress: string
+): Promise<number> {
+  console.log("\nGetting token decimals...");
+  console.log("Token Info:", {
+    contractAddress: tokenInfo.contractAddress,
+    contractName: tokenInfo.contractName,
+    ft: tokenInfo.ft,
+  });
+  console.log("Network:", network);
+  console.log("Sender Address:", senderAddress);
+
+  const networkObj = getNetwork(network);
+  console.log("Network URL:", networkObj.getCoreApiUrl());
+
+  const baseContractName = tokenInfo.contractName.split("::")[0];
+  console.log("Base Contract Name:", baseContractName);
+
+  try {
+    console.log("\nTrying 'get-decimals' function...");
+    try {
+      const result = await callReadOnlyFunction({
+        contractAddress: tokenInfo.contractAddress,
+        contractName: baseContractName,
+        functionName: "get-decimals",
+        functionArgs: [],
+        network: networkObj,
+        senderAddress,
+      });
+
+      console.log("Raw result:", result);
+      const jsonResult = cvToJSON(result);
+      console.log("JSON result:", jsonResult);
+
+      if (jsonResult.success && jsonResult.value?.value) {
+        const decimals = parseInt(jsonResult.value.value);
+        if (!isNaN(decimals)) {
+          console.log("Successfully got decimals:", decimals);
+          return decimals;
+        }
+      }
+    } catch (error) {
+      console.log("'get-decimals' failed, trying 'decimals' function...");
+      console.log("Error was:", error instanceof Error ? error.message : error);
+
+      const result = await callReadOnlyFunction({
+        contractAddress: tokenInfo.contractAddress,
+        contractName: baseContractName,
+        functionName: "decimals",
+        functionArgs: [],
+        network: networkObj,
+        senderAddress,
+      });
+
+      console.log("Raw result from 'decimals':", result);
+      const jsonResult = cvToJSON(result);
+      console.log("JSON result from 'decimals':", jsonResult);
+
+      if (jsonResult.success && jsonResult.value?.value) {
+        const decimals = parseInt(jsonResult.value.value);
+        if (!isNaN(decimals)) {
+          console.log("Successfully got decimals:", decimals);
+          return decimals;
+        }
+      }
+    }
+
+    throw new Error(`Unexpected response format from contract ${tokenInfo.ft}`);
+  } catch (error) {
+    console.error(
+      "Final error getting decimals:",
+      error instanceof Error ? error.message : error
+    );
+    throw new Error(
+      `Failed to read decimals from token contract ${
+        tokenInfo.contractAddress
+      }.${baseContractName}: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`
+    );
+  }
+}
+// token.ts
 export interface TokenInfo {
   ft: string;
   contractAddress: string;

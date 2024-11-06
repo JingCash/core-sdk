@@ -1,0 +1,6 @@
+{
+  "description": "GET fee estimates",
+  "title": "CoreNodeFeeResponse",
+  "type": "string",
+  "additionalProperties": false
+}

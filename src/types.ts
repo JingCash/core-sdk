@@ -1,6 +1,10 @@
+import { NetworkType } from "./network";
+
 export interface JingSDKConfig {
   API_HOST: string;
   API_KEY: string;
+  defaultAddress: string;
+  network: string; // We accept string but validate to NetworkType in the SDK
 }
 
 export type StxAskStatus =
@@ -93,6 +97,7 @@ export interface DisplayOrder extends StxAsk {
   type: string;
   market: string;
   displayAmount: string;
+  displayStxAmount: string;
   displayPrice: string;
 }
 
@@ -100,6 +105,7 @@ export interface DisplayBid extends StacksBid {
   type: string;
   market: string;
   displayAmount: string;
+  displayStxAmount: string;
   displayPrice: string;
 }
 

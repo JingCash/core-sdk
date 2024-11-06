@@ -1,0 +1,28 @@
+{
+  "title": "RpcTxUpdateSubscriptionRequest",
+  "description": "",
+  "type": "object",
+  "required": [
+    "jsonrpc",
+    "id",
+    "method",
+    "params"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "jsonrpc": {
+      "type": "string",
+      "enum": ["2.0"]
+    },
+    "id": {
+      "type": ["number", "string"]
+    },
+    "method": {
+      "type": "string",
+      "enum": ["tx_update"]
+    },
+    "params": {
+      "$ref": "./rpc-tx-update-subscription-params.schema.json"
+    }
+  }
+}
