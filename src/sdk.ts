@@ -974,4 +974,208 @@ export class JingCashSDK {
       );
     }
   }
+
+  // Add these methods to JingCashSDK class
+
+  async repriceBid({
+    swapId,
+    newTokenAmount,
+    pair,
+    recipient,
+    expiry,
+    accountIndex = 0,
+    mnemonic,
+    gasFee = 10000,
+  }: {
+    swapId: number;
+    newTokenAmount: number;
+    pair: string;
+    recipient?: string;
+    expiry?: number;
+    accountIndex?: number;
+    mnemonic: string;
+    gasFee?: number;
+  }) {
+    const tokenInfo = getTokenInfo(pair);
+    if (!tokenInfo) {
+      throw new Error(`Failed to get token info for pair: ${pair}`);
+    }
+
+    const tokenDecimals = await getTokenDecimals(
+      tokenInfo,
+      this.network,
+      this.defaultAddress
+    );
+    const microTokenAmount = Math.floor(
+      newTokenAmount * Math.pow(10, tokenDecimals)
+    );
+
+    const networkObj = getNetwork(this.network);
+    const { address, key } = await deriveChildAccount(
+      this.network,
+      mnemonic,
+      accountIndex
+    );
+    const nonce = await getNextNonce(this.network, address);
+
+    // Get current bid details and verify ownership
+    const bidDetails = await this.getBidDetails(swapId);
+    if (bidDetails.stxSender !== address) {
+      throw new Error(
+        `Only the bid creator (${bidDetails.stxSender}) can reprice this bid`
+      );
+    }
+
+    const txOptions = {
+      contractAddress: JING_CONTRACTS.BID.address,
+      contractName: JING_CONTRACTS.BID.name,
+      functionName: "re-price",
+      functionArgs: [
+        uintCV(swapId),
+        contractPrincipalCV(tokenInfo.contractAddress, tokenInfo.contractName),
+        contractPrincipalCV(
+          JING_CONTRACTS.YIN.address,
+          JING_CONTRACTS.YIN.name
+        ),
+        uintCV(microTokenAmount),
+        expiry ? someCV(uintCV(expiry)) : noneCV(),
+        recipient ? someCV(standardPrincipalCV(recipient)) : noneCV(),
+      ],
+      senderKey: key,
+      validateWithAbi: true,
+      network: networkObj,
+      anchorMode: AnchorMode.Any,
+      postConditionMode: PostConditionMode.Allow,
+      nonce,
+      fee: gasFee,
+    };
+
+    try {
+      const transaction = await makeContractCall(txOptions);
+      const broadcastResponse = await broadcastTransaction(
+        transaction,
+        networkObj
+      );
+
+      return {
+        txid: broadcastResponse.txid,
+        details: {
+          swapId,
+          tokenDecimals,
+          tokenSymbol: tokenInfo.symbol,
+          address,
+          bidDetails,
+          newAmount: microTokenAmount,
+          recipient,
+          expiry,
+          gasFee: gasFee / 1_000_000,
+        },
+      };
+    } catch (error) {
+      throw new Error(
+        `Failed to reprice bid: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
+    }
+  }
+
+  async repriceAsk({
+    swapId,
+    newStxAmount,
+    pair,
+    recipient,
+    expiry,
+    accountIndex = 0,
+    mnemonic,
+    gasFee = 10000,
+  }: {
+    swapId: number;
+    newStxAmount: number;
+    pair: string;
+    recipient?: string;
+    expiry?: number;
+    accountIndex?: number;
+    mnemonic: string;
+    gasFee?: number;
+  }) {
+    const tokenInfo = getTokenInfo(pair);
+    if (!tokenInfo) {
+      throw new Error(`Failed to get token info for pair: ${pair}`);
+    }
+
+    const newUstx = Math.floor(newStxAmount * 1_000_000);
+    const networkObj = getNetwork(this.network);
+    const { address, key } = await deriveChildAccount(
+      this.network,
+      mnemonic,
+      accountIndex
+    );
+    const nonce = await getNextNonce(this.network, address);
+
+    // Get current ask details and verify ownership
+    const askDetails = await this.getAskDetails(swapId);
+    if (askDetails.ftSender !== address) {
+      throw new Error(
+        `Only the ask creator (${askDetails.ftSender}) can reprice this ask`
+      );
+    }
+
+    const txOptions = {
+      contractAddress: JING_CONTRACTS.ASK.address,
+      contractName: JING_CONTRACTS.ASK.name,
+      functionName: "re-price",
+      functionArgs: [
+        uintCV(swapId),
+        contractPrincipalCV(tokenInfo.contractAddress, tokenInfo.contractName),
+        contractPrincipalCV(
+          JING_CONTRACTS.YANG.address,
+          JING_CONTRACTS.YANG.name
+        ),
+        uintCV(newUstx),
+        expiry ? someCV(uintCV(expiry)) : noneCV(),
+        recipient ? someCV(standardPrincipalCV(recipient)) : noneCV(),
+      ],
+      senderKey: key,
+      validateWithAbi: true,
+      network: networkObj,
+      anchorMode: AnchorMode.Any,
+      postConditionMode: PostConditionMode.Allow,
+      nonce,
+      fee: gasFee,
+    };
+
+    try {
+      const transaction = await makeContractCall(txOptions);
+      const broadcastResponse = await broadcastTransaction(
+        transaction,
+        networkObj
+      );
+
+      return {
+        txid: broadcastResponse.txid,
+        details: {
+          swapId,
+          tokenDecimals: await getTokenDecimals(
+            tokenInfo,
+            this.network,
+            this.defaultAddress
+          ),
+          tokenSymbol: tokenInfo.symbol,
+          address,
+          askDetails,
+          newUstx,
+          recipient,
+          expiry,
+          gasFee: gasFee / 1_000_000,
+        },
+      };
+    } catch (error) {
+      throw new Error(
+        `Failed to reprice ask: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
+    }
+  }
 }

@@ -147,4 +147,58 @@ export declare class JingCashSDK {
             gasFee: number;
         };
     }>;
+    repriceBid({ swapId, newTokenAmount, pair, recipient, expiry, accountIndex, mnemonic, gasFee, }: {
+        swapId: number;
+        newTokenAmount: number;
+        pair: string;
+        recipient?: string;
+        expiry?: number;
+        accountIndex?: number;
+        mnemonic: string;
+        gasFee?: number;
+    }): Promise<{
+        txid: string;
+        details: {
+            swapId: number;
+            tokenDecimals: number;
+            tokenSymbol: string;
+            address: string;
+            bidDetails: {
+                ustx: number;
+                amount: number;
+                stxSender: string;
+            };
+            newAmount: number;
+            recipient: string | undefined;
+            expiry: number | undefined;
+            gasFee: number;
+        };
+    }>;
+    repriceAsk({ swapId, newStxAmount, pair, recipient, expiry, accountIndex, mnemonic, gasFee, }: {
+        swapId: number;
+        newStxAmount: number;
+        pair: string;
+        recipient?: string;
+        expiry?: number;
+        accountIndex?: number;
+        mnemonic: string;
+        gasFee?: number;
+    }): Promise<{
+        txid: string;
+        details: {
+            swapId: number;
+            tokenDecimals: number;
+            tokenSymbol: string;
+            address: string;
+            askDetails: {
+                ustx: number;
+                amount: number;
+                ftSender: string;
+            };
+            newUstx: number;
+            recipient: string | undefined;
+            expiry: number | undefined;
+            gasFee: number;
+        };
+    }>;
 }
