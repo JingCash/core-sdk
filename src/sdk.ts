@@ -154,9 +154,22 @@ export class JingCashSDK {
       throw new Error(`Unsupported trading pair: ${pair}`);
     }
 
+    // Get token info and extract just the contract part
+    const tokenInfo = getTokenInfo(pair);
+    if (!tokenInfo) {
+      throw new Error(`Failed to get token info for pair: ${pair}`);
+    }
+
+    // Extract the contract part before the ::
+    const ftContract = `${tokenInfo.contractAddress}.${tokenInfo.contractName}`;
+
     const [bidsResponse, asksResponse] = await Promise.all([
-      this.fetch<ApiResponse<StacksBid>>(`/token-pairs/${pair}/stx-bids`),
-      this.fetch<ApiResponse<StxAsk>>(`/token-pairs/${pair}/stx-asks`),
+      this.fetch<ApiResponse<StacksBid>>(
+        `/token-pairs/${pair}/stx-bids?ftContract=${ftContract}`
+      ),
+      this.fetch<ApiResponse<StxAsk>>(
+        `/token-pairs/${pair}/stx-asks?ftContract=${ftContract}`
+      ),
     ]);
 
     return {
