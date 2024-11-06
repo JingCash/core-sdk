@@ -48,10 +48,11 @@ export async function getTokenDecimals(
 }
 // token.ts
 export interface TokenInfo {
-  ft: string;
-  contractAddress: string;
-  contractName: string;
-  assetName: string;
+  ft: string; // Full token identifier including asset name
+  contractAddress: string; // Contract address
+  contractName: string; // Full contract name
+  assetName: string; // Asset name after :: (for post conditions)
+  symbol: string; // Display symbol (e.g., "PEPE")
 }
 
 export function getTokenInfo(pairString: string): TokenInfo | null {
@@ -67,6 +68,30 @@ export function getTokenInfo(pairString: string): TokenInfo | null {
     contractAddress,
     contractName,
     assetName,
+    symbol,
+  };
+}
+
+export function getTokenInfoFromContract(ftContract: string): TokenInfo {
+  // First get the token symbol
+  const symbol = getTokenSymbol(ftContract);
+
+  // Use the symbol to get the full contract info from TokenMap
+  const fullFtContract = TokenMap[symbol];
+  if (!fullFtContract) {
+    throw new Error(`Unknown token contract: ${ftContract}`);
+  }
+
+  // Now parse the full contract info that includes the asset name
+  const [contractPart, assetName] = fullFtContract.split("::");
+  const [contractAddress, contractName] = contractPart.split(".");
+
+  return {
+    ft: ftContract,
+    contractAddress,
+    contractName,
+    assetName,
+    symbol,
   };
 }
 

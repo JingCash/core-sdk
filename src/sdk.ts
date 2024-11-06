@@ -37,6 +37,7 @@ import {
   calculateBidFees,
   TokenInfo,
   calculateAskFees,
+  getTokenInfoFromContract,
 } from "./token-utils";
 import { JING_CONTRACTS, STX_DECIMALS } from "./constants";
 import {
@@ -522,13 +523,7 @@ export class JingCashSDK {
     if (!jsonResult.success) throw new Error("Failed to get bid details");
 
     const ftContract = jsonResult.value.value.ft.value;
-    const [contractAddress, contractName] = ftContract.split(".");
-    const tokenInfo: TokenInfo = {
-      ft: ftContract,
-      contractAddress,
-      contractName,
-      assetName: contractName.split("-")[0],
-    };
+    const tokenInfo = getTokenInfoFromContract(ftContract);
 
     const tokenDecimals = await getTokenDecimals(
       tokenInfo,
@@ -643,13 +638,7 @@ export class JingCashSDK {
     if (!jsonResult.success) throw new Error("Failed to get ask details");
 
     const ftContract = jsonResult.value.value.ft.value;
-    const [contractAddress, contractName] = ftContract.split(".");
-    const tokenInfo: TokenInfo = {
-      ft: ftContract,
-      contractAddress,
-      contractName,
-      assetName: contractName.split("-")[0],
-    };
+    const tokenInfo = getTokenInfoFromContract(ftContract);
 
     const tokenDecimals = await getTokenDecimals(
       tokenInfo,
@@ -667,7 +656,7 @@ export class JingCashSDK {
         createAssetInfo(
           tokenInfo.contractAddress,
           tokenInfo.contractName,
-          tokenInfo.assetName
+          tokenInfo.assetName // there's an issue here we need to map to assetName not tokenSymbol
         )
       ),
       makeContractFungiblePostCondition(
@@ -727,6 +716,259 @@ export class JingCashSDK {
     } catch (error) {
       throw new Error(
         `Failed to cancel ask: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
+    }
+  }
+
+  // Add these methods to JingCashSDK class
+
+  async submitBid({
+    swapId,
+    gasFee,
+    accountIndex = 0,
+    mnemonic,
+  }: {
+    swapId: number;
+    gasFee: number;
+    accountIndex?: number;
+    mnemonic: string;
+  }) {
+    const networkObj = getNetwork(this.network);
+    const { address, key } = await deriveChildAccount(
+      this.network,
+      mnemonic,
+      accountIndex
+    );
+    const nonce = await getNextNonce(this.network, address);
+
+    // Get bid details
+    const bidDetails = await this.getBidDetails(swapId);
+
+    // Get token info from the bid details
+    const result = await callReadOnlyFunction({
+      contractAddress: JING_CONTRACTS.BID.address,
+      contractName: JING_CONTRACTS.BID.name,
+      functionName: "get-swap",
+      functionArgs: [uintCV(swapId)],
+      network: networkObj,
+      senderAddress: this.defaultAddress,
+    });
+
+    const jsonResult = cvToJSON(result);
+    if (!jsonResult.success) throw new Error("Failed to get bid details");
+
+    const ftContract = jsonResult.value.value.ft.value;
+    const tokenInfo = getTokenInfoFromContract(ftContract);
+
+    const tokenDecimals = await getTokenDecimals(
+      tokenInfo,
+      this.network,
+      this.defaultAddress
+    );
+    const fees = calculateBidFees(bidDetails.ustx);
+
+    const postConditions = [
+      // You send the FT
+      makeStandardFungiblePostCondition(
+        address,
+        FungibleConditionCode.Equal,
+        bidDetails.amount,
+        createAssetInfo(
+          tokenInfo.contractAddress,
+          tokenInfo.contractName,
+          tokenInfo.assetName
+        )
+      ),
+      // Contract sends STX
+      makeContractSTXPostCondition(
+        JING_CONTRACTS.BID.address,
+        JING_CONTRACTS.BID.name,
+        FungibleConditionCode.Equal,
+        bidDetails.ustx
+      ),
+      // Fees from YIN contract
+      makeContractSTXPostCondition(
+        JING_CONTRACTS.BID.address,
+        JING_CONTRACTS.YIN.name,
+        FungibleConditionCode.LessEqual,
+        fees
+      ),
+    ];
+
+    const txOptions = {
+      contractAddress: JING_CONTRACTS.BID.address,
+      contractName: JING_CONTRACTS.BID.name,
+      functionName: "submit-swap",
+      functionArgs: [
+        uintCV(swapId),
+        contractPrincipalCV(tokenInfo.contractAddress, tokenInfo.contractName),
+        contractPrincipalCV(
+          JING_CONTRACTS.YIN.address,
+          JING_CONTRACTS.YIN.name
+        ),
+      ],
+      senderKey: key,
+      validateWithAbi: true,
+      network: networkObj,
+      anchorMode: AnchorMode.Any,
+      postConditionMode: PostConditionMode.Deny,
+      postConditions,
+      nonce,
+      fee: gasFee,
+    };
+
+    try {
+      const transaction = await makeContractCall(txOptions);
+      const broadcastResponse = await broadcastTransaction(
+        transaction,
+        networkObj
+      );
+
+      return {
+        txid: broadcastResponse.txid,
+        details: {
+          swapId,
+          tokenDecimals,
+          tokenSymbol: tokenInfo.assetName,
+          address,
+          bidDetails,
+          fees: fees / 1_000_000,
+          gasFee: gasFee / 1_000_000,
+        },
+      };
+    } catch (error) {
+      throw new Error(
+        `Failed to submit bid swap: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
+    }
+  }
+
+  async submitAsk({
+    swapId,
+    gasFee,
+    accountIndex = 0,
+    mnemonic,
+  }: {
+    swapId: number;
+    gasFee: number;
+    accountIndex?: number;
+    mnemonic: string;
+  }) {
+    const networkObj = getNetwork(this.network);
+    const { address, key } = await deriveChildAccount(
+      this.network,
+      mnemonic,
+      accountIndex
+    );
+    const nonce = await getNextNonce(this.network, address);
+
+    // Get ask details
+    const askDetails = await this.getAskDetails(swapId);
+
+    // Get token info from the ask details
+    const result = await callReadOnlyFunction({
+      contractAddress: JING_CONTRACTS.ASK.address,
+      contractName: JING_CONTRACTS.ASK.name,
+      functionName: "get-swap",
+      functionArgs: [uintCV(swapId)],
+      network: networkObj,
+      senderAddress: this.defaultAddress,
+    });
+
+    const jsonResult = cvToJSON(result);
+    if (!jsonResult.success) throw new Error("Failed to get ask details");
+
+    const ftContract = jsonResult.value.value.ft.value;
+    const tokenInfo = getTokenInfoFromContract(ftContract);
+
+    const tokenDecimals = await getTokenDecimals(
+      tokenInfo,
+      this.network,
+      this.defaultAddress
+    );
+    const fees = calculateAskFees(askDetails.amount);
+
+    const postConditions = [
+      // You send STX
+      makeStandardSTXPostCondition(
+        address,
+        FungibleConditionCode.Equal,
+        askDetails.ustx
+      ),
+      // Contract sends FT
+      makeContractFungiblePostCondition(
+        JING_CONTRACTS.ASK.address,
+        JING_CONTRACTS.ASK.name,
+        FungibleConditionCode.Equal,
+        askDetails.amount,
+        createAssetInfo(
+          tokenInfo.contractAddress,
+          tokenInfo.contractName,
+          tokenInfo.assetName
+        )
+      ),
+      // Fees from YANG contract
+      makeContractFungiblePostCondition(
+        JING_CONTRACTS.ASK.address,
+        JING_CONTRACTS.YANG.name,
+        FungibleConditionCode.LessEqual,
+        fees,
+        createAssetInfo(
+          tokenInfo.contractAddress,
+          tokenInfo.contractName,
+          tokenInfo.assetName
+        )
+      ),
+    ];
+
+    const txOptions = {
+      contractAddress: JING_CONTRACTS.ASK.address,
+      contractName: JING_CONTRACTS.ASK.name,
+      functionName: "submit-swap",
+      functionArgs: [
+        uintCV(swapId),
+        contractPrincipalCV(tokenInfo.contractAddress, tokenInfo.contractName),
+        contractPrincipalCV(
+          JING_CONTRACTS.YANG.address,
+          JING_CONTRACTS.YANG.name
+        ),
+      ],
+      senderKey: key,
+      validateWithAbi: true,
+      network: networkObj,
+      anchorMode: AnchorMode.Any,
+      postConditionMode: PostConditionMode.Deny,
+      postConditions,
+      nonce,
+      fee: gasFee,
+    };
+
+    try {
+      const transaction = await makeContractCall(txOptions);
+      const broadcastResponse = await broadcastTransaction(
+        transaction,
+        networkObj
+      );
+
+      return {
+        txid: broadcastResponse.txid,
+        details: {
+          swapId,
+          tokenDecimals,
+          tokenSymbol: tokenInfo.assetName,
+          address,
+          askDetails,
+          fees: fees / Math.pow(10, tokenDecimals),
+          gasFee: gasFee / 1_000_000,
+        },
+      };
+    } catch (error) {
+      throw new Error(
+        `Failed to submit ask swap: ${
           error instanceof Error ? error.message : "Unknown error"
         }`
       );
