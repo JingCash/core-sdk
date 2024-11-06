@@ -12,6 +12,10 @@ import {
   makeStandardSTXPostCondition,
   createAssetInfo,
   makeStandardFungiblePostCondition,
+  callReadOnlyFunction,
+  cvToJSON,
+  makeContractFungiblePostCondition,
+  makeContractSTXPostCondition,
 } from "@stacks/transactions";
 import type {
   JingSDKConfig,
@@ -417,6 +421,284 @@ export class JingCashSDK {
     } catch (error) {
       throw new Error(
         `Failed to create ask offer: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
+    }
+  }
+
+  // In JingCashSDK class
+
+  private async getBidDetails(swapId: number): Promise<{
+    ustx: number;
+    amount: number;
+    stxSender: string;
+  }> {
+    const networkObj = getNetwork(this.network);
+
+    const result = await callReadOnlyFunction({
+      contractAddress: JING_CONTRACTS.BID.address,
+      contractName: JING_CONTRACTS.BID.name,
+      functionName: "get-swap",
+      functionArgs: [uintCV(swapId)],
+      network: networkObj,
+      senderAddress: this.defaultAddress,
+    });
+
+    const jsonResult = cvToJSON(result);
+    if (!jsonResult.success) throw new Error("Failed to get bid details");
+
+    return {
+      ustx: parseInt(jsonResult.value.value.ustx.value),
+      amount: parseInt(jsonResult.value.value.amount.value),
+      stxSender: jsonResult.value.value["stx-sender"].value,
+    };
+  }
+
+  private async getAskDetails(swapId: number): Promise<{
+    ustx: number;
+    amount: number;
+    ftSender: string;
+  }> {
+    const networkObj = getNetwork(this.network);
+
+    const result = await callReadOnlyFunction({
+      contractAddress: JING_CONTRACTS.ASK.address,
+      contractName: JING_CONTRACTS.ASK.name,
+      functionName: "get-swap",
+      functionArgs: [uintCV(swapId)],
+      network: networkObj,
+      senderAddress: this.defaultAddress,
+    });
+
+    const jsonResult = cvToJSON(result);
+    if (!jsonResult.success) throw new Error("Failed to get ask details");
+
+    return {
+      ustx: parseInt(jsonResult.value.value.ustx.value),
+      amount: parseInt(jsonResult.value.value.amount.value),
+      ftSender: jsonResult.value.value["ft-sender"].value,
+    };
+  }
+
+  async cancelBid({
+    swapId,
+    pair,
+    gasFee,
+    accountIndex = 0,
+    mnemonic,
+  }: {
+    swapId: number;
+    pair: string;
+    gasFee: number;
+    accountIndex?: number;
+    mnemonic: string;
+  }) {
+    const tokenInfo = getTokenInfo(pair);
+    if (!tokenInfo) {
+      throw new Error(`Failed to get token info for pair: ${pair}`);
+    }
+
+    const tokenDecimals = await getTokenDecimals(
+      tokenInfo,
+      this.network,
+      this.defaultAddress
+    );
+
+    const networkObj = getNetwork(this.network);
+    const { address, key } = await deriveChildAccount(
+      this.network,
+      mnemonic,
+      accountIndex
+    );
+    const nonce = await getNextNonce(this.network, address);
+
+    // Get bid details for post conditions
+    const bidDetails = await this.getBidDetails(swapId);
+    if (bidDetails.stxSender !== address) {
+      throw new Error(
+        `Only the bid creator (${bidDetails.stxSender}) can cancel this bid`
+      );
+    }
+
+    const fees = calculateBidFees(bidDetails.ustx);
+
+    const postConditions = [
+      makeContractSTXPostCondition(
+        JING_CONTRACTS.BID.address,
+        JING_CONTRACTS.BID.name,
+        FungibleConditionCode.Equal,
+        bidDetails.ustx
+      ),
+      makeContractSTXPostCondition(
+        JING_CONTRACTS.BID.address,
+        JING_CONTRACTS.YIN.name,
+        FungibleConditionCode.LessEqual,
+        fees
+      ),
+    ];
+
+    const txOptions = {
+      contractAddress: JING_CONTRACTS.BID.address,
+      contractName: JING_CONTRACTS.BID.name,
+      functionName: "cancel",
+      functionArgs: [
+        uintCV(swapId),
+        contractPrincipalCV(tokenInfo.contractAddress, tokenInfo.contractName),
+        contractPrincipalCV(
+          JING_CONTRACTS.YIN.address,
+          JING_CONTRACTS.YIN.name
+        ),
+      ],
+      senderKey: key,
+      validateWithAbi: true,
+      network: networkObj,
+      anchorMode: AnchorMode.Any,
+      postConditionMode: PostConditionMode.Deny,
+      postConditions,
+      nonce,
+      fee: gasFee,
+    };
+
+    try {
+      const transaction = await makeContractCall(txOptions);
+      const broadcastResponse = await broadcastTransaction(
+        transaction,
+        networkObj
+      );
+
+      return {
+        txid: broadcastResponse.txid,
+        details: {
+          swapId,
+          pair,
+          tokenDecimals,
+          address,
+          bidDetails,
+          fees: fees / 1_000_000,
+          gasFee: gasFee / 1_000_000,
+        },
+      };
+    } catch (error) {
+      throw new Error(
+        `Failed to cancel bid: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
+    }
+  }
+
+  async cancelAsk({
+    swapId,
+    pair,
+    gasFee,
+    accountIndex = 0,
+    mnemonic,
+  }: {
+    swapId: number;
+    pair: string;
+    gasFee: number;
+    accountIndex?: number;
+    mnemonic: string;
+  }) {
+    const tokenInfo = getTokenInfo(pair);
+    if (!tokenInfo) {
+      throw new Error(`Failed to get token info for pair: ${pair}`);
+    }
+
+    const tokenDecimals = await getTokenDecimals(
+      tokenInfo,
+      this.network,
+      this.defaultAddress
+    );
+
+    const networkObj = getNetwork(this.network);
+    const { address, key } = await deriveChildAccount(
+      this.network,
+      mnemonic,
+      accountIndex
+    );
+    const nonce = await getNextNonce(this.network, address);
+
+    // Get ask details and validate ownership
+    const askDetails = await this.getAskDetails(swapId);
+    if (askDetails.ftSender !== address) {
+      throw new Error(
+        `Only the ask creator (${askDetails.ftSender}) can cancel this ask`
+      );
+    }
+
+    const fees = calculateAskFees(askDetails.amount);
+
+    const postConditions = [
+      makeContractFungiblePostCondition(
+        JING_CONTRACTS.ASK.address,
+        JING_CONTRACTS.YANG.name,
+        FungibleConditionCode.LessEqual,
+        fees,
+        createAssetInfo(
+          tokenInfo.contractAddress,
+          tokenInfo.contractName,
+          tokenInfo.assetName
+        )
+      ),
+      makeContractFungiblePostCondition(
+        JING_CONTRACTS.ASK.address,
+        JING_CONTRACTS.ASK.name,
+        FungibleConditionCode.Equal,
+        askDetails.amount,
+        createAssetInfo(
+          tokenInfo.contractAddress,
+          tokenInfo.contractName,
+          tokenInfo.assetName
+        )
+      ),
+    ];
+
+    const txOptions = {
+      contractAddress: JING_CONTRACTS.ASK.address,
+      contractName: JING_CONTRACTS.ASK.name,
+      functionName: "cancel",
+      functionArgs: [
+        uintCV(swapId),
+        contractPrincipalCV(tokenInfo.contractAddress, tokenInfo.contractName),
+        contractPrincipalCV(
+          JING_CONTRACTS.YANG.address,
+          JING_CONTRACTS.YANG.name
+        ),
+      ],
+      senderKey: key,
+      validateWithAbi: true,
+      network: networkObj,
+      anchorMode: AnchorMode.Any,
+      postConditionMode: PostConditionMode.Deny,
+      postConditions,
+      nonce,
+      fee: gasFee,
+    };
+
+    try {
+      const transaction = await makeContractCall(txOptions);
+      const broadcastResponse = await broadcastTransaction(
+        transaction,
+        networkObj
+      );
+
+      return {
+        txid: broadcastResponse.txid,
+        details: {
+          swapId,
+          pair,
+          tokenDecimals,
+          address,
+          askDetails,
+          fees: fees / Math.pow(10, tokenDecimals),
+          gasFee: gasFee / 1_000_000,
+        },
+      };
+    } catch (error) {
+      throw new Error(
+        `Failed to cancel ask: ${
           error instanceof Error ? error.message : "Unknown error"
         }`
       );

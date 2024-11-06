@@ -61,4 +61,50 @@ export declare class JingCashSDK {
             tokenDecimals: number;
         };
     }>;
+    private getBidDetails;
+    private getAskDetails;
+    cancelBid({ swapId, pair, gasFee, accountIndex, mnemonic, }: {
+        swapId: number;
+        pair: string;
+        gasFee: number;
+        accountIndex?: number;
+        mnemonic: string;
+    }): Promise<{
+        txid: string;
+        details: {
+            swapId: number;
+            pair: string;
+            tokenDecimals: number;
+            address: string;
+            bidDetails: {
+                ustx: number;
+                amount: number;
+                stxSender: string;
+            };
+            fees: number;
+            gasFee: number;
+        };
+    }>;
+    cancelAsk({ swapId, pair, gasFee, accountIndex, mnemonic, }: {
+        swapId: number;
+        pair: string;
+        gasFee: number;
+        accountIndex?: number;
+        mnemonic: string;
+    }): Promise<{
+        txid: string;
+        details: {
+            swapId: number;
+            pair: string;
+            tokenDecimals: number;
+            address: string;
+            askDetails: {
+                ustx: number;
+                amount: number;
+                ftSender: string;
+            };
+            fees: number;
+            gasFee: number;
+        };
+    }>;
 }
