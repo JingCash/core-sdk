@@ -69,6 +69,18 @@ export interface StacksBid {
   expiredHeight?: number | null;
 }
 
+export interface SwapDetails {
+  ustx: number;
+  stxSender: string;
+  amount: number;
+  ftSender: string | null;
+  open: boolean;
+  ft: string;
+  fees: string;
+  expiredHeight: number | null;
+  tokenDecimals?: number;
+}
+
 export interface OrderBook {
   bids: StacksBid[];
   asks: StxAsk[];

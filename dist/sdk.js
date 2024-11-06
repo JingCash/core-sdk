@@ -657,5 +657,86 @@ class JingCashSDK {
             throw new Error(`Failed to reprice ask: ${error instanceof Error ? error.message : "Unknown error"}`);
         }
     }
+    formatSwapResponse(rawResponse) {
+        if (!rawResponse.success)
+            return null;
+        const value = rawResponse.value.value;
+        return {
+            ustx: parseInt(value.ustx.value),
+            stxSender: value["stx-sender"].value,
+            amount: parseInt(value.amount.value),
+            ftSender: value["ft-sender"].value,
+            open: value.open.value,
+            ft: value.ft.value,
+            fees: value.fees.value,
+            expiredHeight: value["expired-height"].value,
+        };
+    }
+    async getBid(swapId) {
+        const network = (0, network_1.getNetwork)(this.network);
+        const senderAddress = this.defaultAddress;
+        try {
+            const result = await (0, transactions_1.callReadOnlyFunction)({
+                contractAddress: constants_1.JING_CONTRACTS.BID.address,
+                contractName: constants_1.JING_CONTRACTS.BID.name,
+                functionName: "get-swap",
+                functionArgs: [(0, transactions_1.uintCV)(swapId)],
+                network,
+                senderAddress,
+            });
+            const jsonResult = (0, transactions_1.cvToJSON)(result);
+            const formattedSwap = this.formatSwapResponse(jsonResult);
+            if (formattedSwap) {
+                return {
+                    ...formattedSwap,
+                    contract: {
+                        address: constants_1.JING_CONTRACTS.BID.address,
+                        name: constants_1.JING_CONTRACTS.BID.name,
+                    },
+                };
+            }
+            else {
+                console.error("Failed to parse swap details");
+                return null;
+            }
+        }
+        catch (error) {
+            console.error(`Error fetching swap: ${error instanceof Error ? error.message : "Unknown error"}`);
+            throw error;
+        }
+    }
+    async getAsk(swapId) {
+        const network = (0, network_1.getNetwork)(this.network);
+        const senderAddress = this.defaultAddress;
+        try {
+            const result = await (0, transactions_1.callReadOnlyFunction)({
+                contractAddress: constants_1.JING_CONTRACTS.ASK.address,
+                contractName: constants_1.JING_CONTRACTS.ASK.name,
+                functionName: "get-swap",
+                functionArgs: [(0, transactions_1.uintCV)(swapId)],
+                network,
+                senderAddress,
+            });
+            const jsonResult = (0, transactions_1.cvToJSON)(result);
+            const formattedSwap = this.formatSwapResponse(jsonResult);
+            if (formattedSwap) {
+                return {
+                    ...formattedSwap,
+                    contract: {
+                        address: constants_1.JING_CONTRACTS.ASK.address,
+                        name: constants_1.JING_CONTRACTS.ASK.name,
+                    },
+                };
+            }
+            else {
+                console.error("Failed to parse swap details");
+                return null;
+            }
+        }
+        catch (error) {
+            console.error(`Error fetching swap: ${error instanceof Error ? error.message : "Unknown error"}`);
+            throw error;
+        }
+    }
 }
 exports.JingCashSDK = JingCashSDK;

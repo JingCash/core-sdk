@@ -1,4 +1,4 @@
-import type { JingSDKConfig, OrderBook, PrivateOffersResponse, UserOffersResponse, DisplayOrder, DisplayBid } from "./types";
+import type { JingSDKConfig, OrderBook, PrivateOffersResponse, UserOffersResponse, DisplayOrder, DisplayBid, SwapDetails } from "./types";
 export declare class JingCashSDK {
     private readonly API_HOST;
     private readonly API_KEY;
@@ -201,4 +201,17 @@ export declare class JingCashSDK {
             gasFee: number;
         };
     }>;
+    private formatSwapResponse;
+    getBid(swapId: number): Promise<(SwapDetails & {
+        contract: {
+            address: string;
+            name: string;
+        };
+    }) | null>;
+    getAsk(swapId: number): Promise<(SwapDetails & {
+        contract: {
+            address: string;
+            name: string;
+        };
+    }) | null>;
 }

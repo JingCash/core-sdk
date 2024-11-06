@@ -27,6 +27,7 @@ import type {
   StacksBid,
   DisplayOrder,
   DisplayBid,
+  SwapDetails,
 } from "./types";
 import {
   getTokenInfo,
@@ -1176,6 +1177,109 @@ export class JingCashSDK {
           error instanceof Error ? error.message : "Unknown error"
         }`
       );
+    }
+  }
+
+  private formatSwapResponse(rawResponse: any): SwapDetails | null {
+    if (!rawResponse.success) return null;
+
+    const value = rawResponse.value.value;
+
+    return {
+      ustx: parseInt(value.ustx.value),
+      stxSender: value["stx-sender"].value,
+      amount: parseInt(value.amount.value),
+      ftSender: value["ft-sender"].value,
+      open: value.open.value,
+      ft: value.ft.value,
+      fees: value.fees.value,
+      expiredHeight: value["expired-height"].value,
+    };
+  }
+
+  async getBid(
+    swapId: number
+  ): Promise<
+    (SwapDetails & { contract: { address: string; name: string } }) | null
+  > {
+    const network = getNetwork(this.network);
+    const senderAddress = this.defaultAddress;
+
+    try {
+      const result = await callReadOnlyFunction({
+        contractAddress: JING_CONTRACTS.BID.address,
+        contractName: JING_CONTRACTS.BID.name,
+        functionName: "get-swap",
+        functionArgs: [uintCV(swapId)],
+        network,
+        senderAddress,
+      });
+
+      const jsonResult = cvToJSON(result);
+      const formattedSwap = this.formatSwapResponse(jsonResult);
+
+      if (formattedSwap) {
+        return {
+          ...formattedSwap,
+          contract: {
+            address: JING_CONTRACTS.BID.address,
+            name: JING_CONTRACTS.BID.name,
+          },
+        };
+      } else {
+        console.error("Failed to parse swap details");
+        return null;
+      }
+    } catch (error: unknown) {
+      console.error(
+        `Error fetching swap: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
+      throw error;
+    }
+  }
+
+  async getAsk(
+    swapId: number
+  ): Promise<
+    (SwapDetails & { contract: { address: string; name: string } }) | null
+  > {
+    const network = getNetwork(this.network);
+    const senderAddress = this.defaultAddress;
+
+    try {
+      const result = await callReadOnlyFunction({
+        contractAddress: JING_CONTRACTS.ASK.address,
+        contractName: JING_CONTRACTS.ASK.name,
+        functionName: "get-swap",
+        functionArgs: [uintCV(swapId)],
+        network,
+        senderAddress,
+      });
+
+      const jsonResult = cvToJSON(result);
+      const formattedSwap = this.formatSwapResponse(jsonResult);
+
+      if (formattedSwap) {
+        return {
+          ...formattedSwap,
+          contract: {
+            address: JING_CONTRACTS.ASK.address,
+            name: JING_CONTRACTS.ASK.name,
+          },
+        };
+      } else {
+        console.error("Failed to parse swap details");
+        return null;
+      }
+    } catch (error: unknown) {
+      console.error(
+        `Error fetching swap: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
+      throw error;
     }
   }
 }
