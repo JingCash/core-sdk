@@ -657,19 +657,26 @@ class JingCashSDK {
             throw new Error(`Failed to reprice ask: ${error instanceof Error ? error.message : "Unknown error"}`);
         }
     }
-    formatSwapResponse(rawResponse) {
+    async formatSwapResponse(rawResponse) {
         if (!rawResponse.success)
             return null;
         const value = rawResponse.value.value;
+        const ftContract = value.ft.value;
+        // Retrieve token info and decimals directly within SDK
+        const tokenInfo = (0, token_utils_1.getTokenInfoFromContract)(ftContract);
+        const tokenSymbol = tokenInfo.symbol;
+        const tokenDecimals = await (0, token_utils_1.getTokenDecimals)(tokenInfo, this.network, this.defaultAddress);
         return {
             ustx: parseInt(value.ustx.value),
             stxSender: value["stx-sender"].value,
             amount: parseInt(value.amount.value),
             ftSender: value["ft-sender"].value,
             open: value.open.value,
-            ft: value.ft.value,
+            ft: ftContract,
             fees: value.fees.value,
             expiredHeight: value["expired-height"].value,
+            tokenSymbol,
+            tokenDecimals,
         };
     }
     async getBid(swapId) {
@@ -685,7 +692,7 @@ class JingCashSDK {
                 senderAddress,
             });
             const jsonResult = (0, transactions_1.cvToJSON)(result);
-            const formattedSwap = this.formatSwapResponse(jsonResult);
+            const formattedSwap = await this.formatSwapResponse(jsonResult);
             if (formattedSwap) {
                 return {
                     ...formattedSwap,
@@ -718,7 +725,7 @@ class JingCashSDK {
                 senderAddress,
             });
             const jsonResult = (0, transactions_1.cvToJSON)(result);
-            const formattedSwap = this.formatSwapResponse(jsonResult);
+            const formattedSwap = await this.formatSwapResponse(jsonResult);
             if (formattedSwap) {
                 return {
                     ...formattedSwap,
