@@ -63,9 +63,8 @@ export declare class JingCashSDK {
     }>;
     private getBidDetails;
     private getAskDetails;
-    cancelBid({ swapId, pair, gasFee, accountIndex, mnemonic, }: {
+    cancelBid({ swapId, gasFee, accountIndex, mnemonic, }: {
         swapId: number;
-        pair: string;
         gasFee: number;
         accountIndex?: number;
         mnemonic: string;
@@ -73,8 +72,8 @@ export declare class JingCashSDK {
         txid: string;
         details: {
             swapId: number;
-            pair: string;
             tokenDecimals: number;
+            tokenSymbol: string;
             address: string;
             bidDetails: {
                 ustx: number;
@@ -85,9 +84,8 @@ export declare class JingCashSDK {
             gasFee: number;
         };
     }>;
-    cancelAsk({ swapId, pair, gasFee, accountIndex, mnemonic, }: {
+    cancelAsk({ swapId, gasFee, accountIndex, mnemonic, }: {
         swapId: number;
-        pair: string;
         gasFee: number;
         accountIndex?: number;
         mnemonic: string;
@@ -95,8 +93,8 @@ export declare class JingCashSDK {
         txid: string;
         details: {
             swapId: number;
-            pair: string;
             tokenDecimals: number;
+            tokenSymbol: string;
             address: string;
             askDetails: {
                 ustx: number;

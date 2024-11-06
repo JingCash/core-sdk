@@ -483,28 +483,15 @@ export class JingCashSDK {
 
   async cancelBid({
     swapId,
-    pair,
     gasFee,
     accountIndex = 0,
     mnemonic,
   }: {
     swapId: number;
-    pair: string;
     gasFee: number;
     accountIndex?: number;
     mnemonic: string;
   }) {
-    const tokenInfo = getTokenInfo(pair);
-    if (!tokenInfo) {
-      throw new Error(`Failed to get token info for pair: ${pair}`);
-    }
-
-    const tokenDecimals = await getTokenDecimals(
-      tokenInfo,
-      this.network,
-      this.defaultAddress
-    );
-
     const networkObj = getNetwork(this.network);
     const { address, key } = await deriveChildAccount(
       this.network,
@@ -513,7 +500,7 @@ export class JingCashSDK {
     );
     const nonce = await getNextNonce(this.network, address);
 
-    // Get bid details for post conditions
+    // Get bid details
     const bidDetails = await this.getBidDetails(swapId);
     if (bidDetails.stxSender !== address) {
       throw new Error(
@@ -521,6 +508,33 @@ export class JingCashSDK {
       );
     }
 
+    // Get token info from the bid details
+    const result = await callReadOnlyFunction({
+      contractAddress: JING_CONTRACTS.BID.address,
+      contractName: JING_CONTRACTS.BID.name,
+      functionName: "get-swap",
+      functionArgs: [uintCV(swapId)],
+      network: networkObj,
+      senderAddress: this.defaultAddress,
+    });
+
+    const jsonResult = cvToJSON(result);
+    if (!jsonResult.success) throw new Error("Failed to get bid details");
+
+    const ftContract = jsonResult.value.value.ft.value;
+    const [contractAddress, contractName] = ftContract.split(".");
+    const tokenInfo: TokenInfo = {
+      ft: ftContract,
+      contractAddress,
+      contractName,
+      assetName: contractName.split("-")[0],
+    };
+
+    const tokenDecimals = await getTokenDecimals(
+      tokenInfo,
+      this.network,
+      this.defaultAddress
+    );
     const fees = calculateBidFees(bidDetails.ustx);
 
     const postConditions = [
@@ -571,8 +585,8 @@ export class JingCashSDK {
         txid: broadcastResponse.txid,
         details: {
           swapId,
-          pair,
           tokenDecimals,
+          tokenSymbol: tokenInfo.assetName,
           address,
           bidDetails,
           fees: fees / 1_000_000,
@@ -590,28 +604,15 @@ export class JingCashSDK {
 
   async cancelAsk({
     swapId,
-    pair,
     gasFee,
     accountIndex = 0,
     mnemonic,
   }: {
     swapId: number;
-    pair: string;
     gasFee: number;
     accountIndex?: number;
     mnemonic: string;
   }) {
-    const tokenInfo = getTokenInfo(pair);
-    if (!tokenInfo) {
-      throw new Error(`Failed to get token info for pair: ${pair}`);
-    }
-
-    const tokenDecimals = await getTokenDecimals(
-      tokenInfo,
-      this.network,
-      this.defaultAddress
-    );
-
     const networkObj = getNetwork(this.network);
     const { address, key } = await deriveChildAccount(
       this.network,
@@ -620,7 +621,7 @@ export class JingCashSDK {
     );
     const nonce = await getNextNonce(this.network, address);
 
-    // Get ask details and validate ownership
+    // Get ask details
     const askDetails = await this.getAskDetails(swapId);
     if (askDetails.ftSender !== address) {
       throw new Error(
@@ -628,6 +629,33 @@ export class JingCashSDK {
       );
     }
 
+    // Get token info from the ask details
+    const result = await callReadOnlyFunction({
+      contractAddress: JING_CONTRACTS.ASK.address,
+      contractName: JING_CONTRACTS.ASK.name,
+      functionName: "get-swap",
+      functionArgs: [uintCV(swapId)],
+      network: networkObj,
+      senderAddress: this.defaultAddress,
+    });
+
+    const jsonResult = cvToJSON(result);
+    if (!jsonResult.success) throw new Error("Failed to get ask details");
+
+    const ftContract = jsonResult.value.value.ft.value;
+    const [contractAddress, contractName] = ftContract.split(".");
+    const tokenInfo: TokenInfo = {
+      ft: ftContract,
+      contractAddress,
+      contractName,
+      assetName: contractName.split("-")[0],
+    };
+
+    const tokenDecimals = await getTokenDecimals(
+      tokenInfo,
+      this.network,
+      this.defaultAddress
+    );
     const fees = calculateAskFees(askDetails.amount);
 
     const postConditions = [
@@ -688,8 +716,8 @@ export class JingCashSDK {
         txid: broadcastResponse.txid,
         details: {
           swapId,
-          pair,
           tokenDecimals,
+          tokenSymbol: tokenInfo.assetName,
           address,
           askDetails,
           fees: fees / Math.pow(10, tokenDecimals),
