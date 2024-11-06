@@ -78,7 +78,8 @@ export interface SwapDetails {
   ft: string;
   fees: string;
   expiredHeight: number | null;
-  tokenDecimals?: number;
+  tokenSymbol: string;
+  tokenDecimals: number;
 }
 
 export interface OrderBook {

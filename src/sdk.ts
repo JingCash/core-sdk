@@ -1180,10 +1180,22 @@ export class JingCashSDK {
     }
   }
 
-  private formatSwapResponse(rawResponse: any): SwapDetails | null {
+  private async formatSwapResponse(
+    rawResponse: any
+  ): Promise<SwapDetails | null> {
     if (!rawResponse.success) return null;
 
     const value = rawResponse.value.value;
+    const ftContract = value.ft.value;
+
+    // Retrieve token info and decimals directly within SDK
+    const tokenInfo = getTokenInfoFromContract(ftContract);
+    const tokenSymbol = tokenInfo.symbol;
+    const tokenDecimals = await getTokenDecimals(
+      tokenInfo,
+      this.network,
+      this.defaultAddress
+    );
 
     return {
       ustx: parseInt(value.ustx.value),
@@ -1191,9 +1203,11 @@ export class JingCashSDK {
       amount: parseInt(value.amount.value),
       ftSender: value["ft-sender"].value,
       open: value.open.value,
-      ft: value.ft.value,
+      ft: ftContract,
       fees: value.fees.value,
       expiredHeight: value["expired-height"].value,
+      tokenSymbol,
+      tokenDecimals,
     };
   }
 
@@ -1216,7 +1230,7 @@ export class JingCashSDK {
       });
 
       const jsonResult = cvToJSON(result);
-      const formattedSwap = this.formatSwapResponse(jsonResult);
+      const formattedSwap = await this.formatSwapResponse(jsonResult);
 
       if (formattedSwap) {
         return {
@@ -1230,7 +1244,7 @@ export class JingCashSDK {
         console.error("Failed to parse swap details");
         return null;
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error(
         `Error fetching swap: ${
           error instanceof Error ? error.message : "Unknown error"
@@ -1259,7 +1273,7 @@ export class JingCashSDK {
       });
 
       const jsonResult = cvToJSON(result);
-      const formattedSwap = this.formatSwapResponse(jsonResult);
+      const formattedSwap = await this.formatSwapResponse(jsonResult);
 
       if (formattedSwap) {
         return {
@@ -1273,7 +1287,7 @@ export class JingCashSDK {
         console.error("Failed to parse swap details");
         return null;
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error(
         `Error fetching swap: ${
           error instanceof Error ? error.message : "Unknown error"
