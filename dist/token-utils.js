@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getTokenDecimals = getTokenDecimals;
 exports.getTokenInfo = getTokenInfo;
+exports.getTokenInfoFromContract = getTokenInfoFromContract;
 exports.getSupportedPairs = getSupportedPairs;
 exports.getTokenSymbol = getTokenSymbol;
 exports.getMarketPair = getMarketPair;
@@ -50,6 +51,26 @@ function getTokenInfo(pairString) {
         contractAddress,
         contractName,
         assetName,
+        symbol,
+    };
+}
+function getTokenInfoFromContract(ftContract) {
+    // First get the token symbol
+    const symbol = getTokenSymbol(ftContract);
+    // Use the symbol to get the full contract info from TokenMap
+    const fullFtContract = constants_1.TokenMap[symbol];
+    if (!fullFtContract) {
+        throw new Error(`Unknown token contract: ${ftContract}`);
+    }
+    // Now parse the full contract info that includes the asset name
+    const [contractPart, assetName] = fullFtContract.split("::");
+    const [contractAddress, contractName] = contractPart.split(".");
+    return {
+        ft: ftContract,
+        contractAddress,
+        contractName,
+        assetName,
+        symbol,
     };
 }
 function getSupportedPairs() {

@@ -5,8 +5,10 @@ export interface TokenInfo {
     contractAddress: string;
     contractName: string;
     assetName: string;
+    symbol: string;
 }
 export declare function getTokenInfo(pairString: string): TokenInfo | null;
+export declare function getTokenInfoFromContract(ftContract: string): TokenInfo;
 export declare function getSupportedPairs(): string[];
 export declare function getTokenSymbol(ft: string): string;
 export declare function getMarketPair(contract: string): string;

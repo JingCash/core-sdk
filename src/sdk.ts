@@ -831,7 +831,7 @@ export class JingCashSDK {
         details: {
           swapId,
           tokenDecimals,
-          tokenSymbol: tokenInfo.assetName,
+          tokenSymbol: tokenInfo.symbol,
           address,
           bidDetails,
           fees: fees / 1_000_000,
@@ -959,7 +959,7 @@ export class JingCashSDK {
         details: {
           swapId,
           tokenDecimals,
-          tokenSymbol: tokenInfo.assetName,
+          tokenSymbol: tokenInfo.symbol,
           address,
           askDetails,
           fees: fees / Math.pow(10, tokenDecimals),

@@ -293,13 +293,7 @@ class JingCashSDK {
         if (!jsonResult.success)
             throw new Error("Failed to get bid details");
         const ftContract = jsonResult.value.value.ft.value;
-        const [contractAddress, contractName] = ftContract.split(".");
-        const tokenInfo = {
-            ft: ftContract,
-            contractAddress,
-            contractName,
-            assetName: contractName.split("-")[0],
-        };
+        const tokenInfo = (0, token_utils_1.getTokenInfoFromContract)(ftContract);
         const tokenDecimals = await (0, token_utils_1.getTokenDecimals)(tokenInfo, this.network, this.defaultAddress);
         const fees = (0, token_utils_1.calculateBidFees)(bidDetails.ustx);
         const postConditions = [
@@ -366,17 +360,12 @@ class JingCashSDK {
         if (!jsonResult.success)
             throw new Error("Failed to get ask details");
         const ftContract = jsonResult.value.value.ft.value;
-        const [contractAddress, contractName] = ftContract.split(".");
-        const tokenInfo = {
-            ft: ftContract,
-            contractAddress,
-            contractName,
-            assetName: contractName.split("-")[0],
-        };
+        const tokenInfo = (0, token_utils_1.getTokenInfoFromContract)(ftContract);
         const tokenDecimals = await (0, token_utils_1.getTokenDecimals)(tokenInfo, this.network, this.defaultAddress);
         const fees = (0, token_utils_1.calculateAskFees)(askDetails.amount);
         const postConditions = [
-            (0, transactions_1.makeContractFungiblePostCondition)(constants_1.JING_CONTRACTS.ASK.address, constants_1.JING_CONTRACTS.YANG.name, transactions_1.FungibleConditionCode.LessEqual, fees, (0, transactions_1.createAssetInfo)(tokenInfo.contractAddress, tokenInfo.contractName, tokenInfo.assetName)),
+            (0, transactions_1.makeContractFungiblePostCondition)(constants_1.JING_CONTRACTS.ASK.address, constants_1.JING_CONTRACTS.YANG.name, transactions_1.FungibleConditionCode.LessEqual, fees, (0, transactions_1.createAssetInfo)(tokenInfo.contractAddress, tokenInfo.contractName, tokenInfo.assetName // there's an issue here we need to map to assetName not tokenSymbol
+            )),
             (0, transactions_1.makeContractFungiblePostCondition)(constants_1.JING_CONTRACTS.ASK.address, constants_1.JING_CONTRACTS.ASK.name, transactions_1.FungibleConditionCode.Equal, askDetails.amount, (0, transactions_1.createAssetInfo)(tokenInfo.contractAddress, tokenInfo.contractName, tokenInfo.assetName)),
         ];
         const txOptions = {
@@ -437,13 +426,7 @@ class JingCashSDK {
         if (!jsonResult.success)
             throw new Error("Failed to get bid details");
         const ftContract = jsonResult.value.value.ft.value;
-        const [contractAddress, contractName] = ftContract.split(".");
-        const tokenInfo = {
-            ft: ftContract,
-            contractAddress,
-            contractName,
-            assetName: (0, token_utils_1.getTokenSymbol)(ftContract),
-        };
+        const tokenInfo = (0, token_utils_1.getTokenInfoFromContract)(ftContract);
         const tokenDecimals = await (0, token_utils_1.getTokenDecimals)(tokenInfo, this.network, this.defaultAddress);
         const fees = (0, token_utils_1.calculateBidFees)(bidDetails.ustx);
         const postConditions = [
@@ -480,7 +463,7 @@ class JingCashSDK {
                 details: {
                     swapId,
                     tokenDecimals,
-                    tokenSymbol: tokenInfo.assetName,
+                    tokenSymbol: tokenInfo.symbol,
                     address,
                     bidDetails,
                     fees: fees / 1000000,
@@ -511,13 +494,7 @@ class JingCashSDK {
         if (!jsonResult.success)
             throw new Error("Failed to get ask details");
         const ftContract = jsonResult.value.value.ft.value;
-        const [contractAddress, contractName] = ftContract.split(".");
-        const tokenInfo = {
-            ft: ftContract,
-            contractAddress,
-            contractName,
-            assetName: (0, token_utils_1.getTokenSymbol)(ftContract),
-        };
+        const tokenInfo = (0, token_utils_1.getTokenInfoFromContract)(ftContract);
         const tokenDecimals = await (0, token_utils_1.getTokenDecimals)(tokenInfo, this.network, this.defaultAddress);
         const fees = (0, token_utils_1.calculateAskFees)(askDetails.amount);
         const postConditions = [
@@ -554,7 +531,7 @@ class JingCashSDK {
                 details: {
                     swapId,
                     tokenDecimals,
-                    tokenSymbol: tokenInfo.assetName,
+                    tokenSymbol: tokenInfo.symbol,
                     address,
                     askDetails,
                     fees: fees / Math.pow(10, tokenDecimals),
