@@ -3,6 +3,14 @@ import { StacksNetwork } from "@stacks/network";
 import { ClarityValue, TxBroadcastResult } from "@stacks/transactions";
 import type { AddressNonces } from "@stacks/stacks-blockchain-api-types";
 export type NetworkType = "mainnet" | "testnet" | "devnet" | "mocknet";
+export interface ReadOnlyFunctionOptions {
+    contractAddress: string;
+    contractName: string;
+    functionName: string;
+    functionArgs: ClarityValue[];
+    network: StacksNetwork;
+    senderAddress: string;
+}
 export declare function getNetworkByPrincipal(principal: string): NetworkType;
 export declare function validateNetwork(network?: string): NetworkType;
 export declare function getNetwork(network: NetworkType): StacksNetwork;

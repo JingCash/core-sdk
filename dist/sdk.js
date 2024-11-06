@@ -167,5 +167,70 @@ class JingCashSDK {
             throw new Error(`Failed to create bid offer: ${error instanceof Error ? error.message : "Unknown error"}`);
         }
     }
+    // In sdk.ts, add this method to JingCashSDK class
+    async createAskOffer({ pair, tokenAmount, stxAmount, gasFee, recipient, expiry, accountIndex = 0, mnemonic, }) {
+        if (!(0, token_utils_1.getSupportedPairs)().includes(pair)) {
+            throw new Error(`Unsupported trading pair: ${pair}`);
+        }
+        const tokenInfo = (0, token_utils_1.getTokenInfo)(pair);
+        if (!tokenInfo) {
+            throw new Error(`Failed to get token info for pair: ${pair}`);
+        }
+        const tokenDecimals = await (0, token_utils_1.getTokenDecimals)(tokenInfo, this.network, this.defaultAddress);
+        // Convert to micro units
+        const microTokenAmount = Math.floor(tokenAmount * Math.pow(10, tokenDecimals));
+        const ustx = Math.floor(stxAmount * 1000000);
+        const networkObj = (0, network_1.getNetwork)(this.network);
+        const { address, key } = await (0, account_1.deriveChildAccount)(this.network, mnemonic, accountIndex);
+        const nonce = await (0, network_1.getNextNonce)(this.network, address);
+        // Calculate fees (in FT)
+        const microFees = (0, token_utils_1.calculateAskFees)(microTokenAmount);
+        const txOptions = {
+            contractAddress: constants_1.JING_CONTRACTS.ASK.address,
+            contractName: constants_1.JING_CONTRACTS.ASK.name,
+            functionName: "offer",
+            functionArgs: [
+                (0, transactions_1.uintCV)(microTokenAmount),
+                (0, transactions_1.uintCV)(ustx),
+                recipient ? (0, transactions_1.someCV)((0, transactions_1.standardPrincipalCV)(recipient)) : (0, transactions_1.noneCV)(),
+                (0, transactions_1.contractPrincipalCV)(tokenInfo.contractAddress, tokenInfo.contractName),
+                (0, transactions_1.contractPrincipalCV)(constants_1.JING_CONTRACTS.YANG.address, constants_1.JING_CONTRACTS.YANG.name),
+                expiry ? (0, transactions_1.someCV)((0, transactions_1.uintCV)(expiry)) : (0, transactions_1.noneCV)(),
+            ],
+            senderKey: key,
+            validateWithAbi: true,
+            network: networkObj,
+            anchorMode: transactions_1.AnchorMode.Any,
+            postConditionMode: transactions_1.PostConditionMode.Deny,
+            postConditions: [
+                (0, transactions_1.makeStandardFungiblePostCondition)(address, transactions_1.FungibleConditionCode.LessEqual, microTokenAmount + microFees, (0, transactions_1.createAssetInfo)(tokenInfo.contractAddress, tokenInfo.contractName, tokenInfo.assetName)),
+            ],
+            nonce,
+            fee: gasFee,
+        };
+        try {
+            const transaction = await (0, transactions_1.makeContractCall)(txOptions);
+            const broadcastResponse = await (0, transactions_1.broadcastTransaction)(transaction, networkObj);
+            return {
+                txid: broadcastResponse.txid,
+                details: {
+                    pair,
+                    tokenAmount,
+                    stxAmount,
+                    fees: microFees / Math.pow(10, tokenDecimals),
+                    gasFee: gasFee / 1000000,
+                    recipient,
+                    expiry,
+                    address,
+                    microTokenAmount,
+                    ustx,
+                    tokenDecimals,
+                },
+            };
+        }
+        catch (error) {
+            throw new Error(`Failed to create ask offer: ${error instanceof Error ? error.message : "Unknown error"}`);
+        }
+    }
 }
 exports.JingCashSDK = JingCashSDK;

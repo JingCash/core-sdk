@@ -36,4 +36,29 @@ export declare class JingCashSDK {
             address: string;
         };
     }>;
+    createAskOffer({ pair, tokenAmount, stxAmount, gasFee, recipient, expiry, accountIndex, mnemonic, }: {
+        pair: string;
+        tokenAmount: number;
+        stxAmount: number;
+        gasFee: number;
+        recipient?: string;
+        expiry?: number;
+        accountIndex?: number;
+        mnemonic: string;
+    }): Promise<{
+        txid: string;
+        details: {
+            pair: string;
+            tokenAmount: number;
+            stxAmount: number;
+            fees: number;
+            gasFee: number;
+            recipient: string | undefined;
+            expiry: number | undefined;
+            address: string;
+            microTokenAmount: number;
+            ustx: number;
+            tokenDecimals: number;
+        };
+    }>;
 }
