@@ -1,3 +1,6 @@
+Let me give you the entire README in a single code block for easy copying:
+
+````
 # @jingcash/core-sdk
 
 SDK for interacting with [Jing.Cash](https://app.jing.cash) DEX (Decentralized Exchange) on Stacks.
@@ -6,119 +9,135 @@ SDK for interacting with [Jing.Cash](https://app.jing.cash) DEX (Decentralized E
 
 ```bash
 npm install @jingcash/core-sdk
-```
+````
 
 ## Configuration
 
-Before using the Jingcash SDK, you need to set up your environment variables. Create a .env file in your project root with the following variables:
+Create a `.env` file in your project root:
 
 ```bash
-# API host will be provided by Jingcash
-JING_API_HOST=<api_url>
-# API key will be provided by Jingcash
-JING_API_KEY=<api_key>
+# API access (will be provided by Jing.Cash)
+JING_API_URL=<api_url>
+JING_API_KEY=<your_jc_key>
+
+# Network and account settings
+NETWORK=mainnet
+MNEMONIC=<your_seed_phrase>
+ACCOUNT_INDEX=0
 ```
 
-Contact Jingcash team for access to the API.
+⚠️ Important: Keep your seed phrase secure and never share it. Make sure your .env file is included in .gitignore.
+
+## Features
+
+- Full Jing DEX functionality (spot trading, order management)
+- Market monitoring and order tracking
+- Private P2P offers with optional expiry
+- Automatic token decimal handling
+- Comprehensive post-conditions for safe execution
+- Detailed console output with unit conversion
 
 ## Usage
 
 ```typescript
-import { JingcashSDK } from "@jingcash/core-sdk";
+import { JingCashSDK } from "@jingcash/core-sdk";
 
-// Initialize the SDK
-const jingcash = new JingcashSDK({
-  API_HOST: process.env.JING_API_HOST,
+const sdk = new JingCashSDK({
+  API_HOST: process.env.JING_API_URL,
   API_KEY: process.env.JING_API_KEY,
+  defaultAddress: "SP2...", // Your default Stacks address
+  network: "mainnet", // or "testnet"
 });
 
-// Get order book for a trading pair
-const orderBook = await jingcash.getOrderBook("PEPE-STX");
-console.log("Order Book:", orderBook);
+// Market Data
+const orderBook = await sdk.getOrderBook("PEPE-STX");
+const privateOffers = await sdk.getPrivateOffers("PEPE-STX", "SP2...");
+const userOffers = await sdk.getUserOffers("PEPE-STX", "SP2...");
+const pendingOrders = await sdk.getPendingOrders();
 
-// Get private offers for a user
-const privateOffers = await jingcash.getPrivateOffers(
-  "PEPE-STX", // Trading pair
-  "SP2...", // User's Stacks address
-  "SP2...token-contract" // Token contract
-);
-console.log("Private Offers:", privateOffers);
+// Trading Operations
+const bidResult = await sdk.createBidOffer({
+  pair: "PEPE-STX",
+  stxAmount: 1.5, // In STX
+  tokenAmount: 100000, // In PEPE
+  gasFee: 10000, // In uSTX
+  mnemonic: process.env.MNEMONIC,
+});
 
-// Get user's offers
-const userOffers = await jingcash.getUserOffers(
-  "PEPE-STX", // Trading pair
-  "SP2...", // User's Stacks address
-  "SP2...token-contract" // Token contract
-);
-console.log("User Offers:", userOffers);
+const askResult = await sdk.createAskOffer({
+  pair: "PEPE-STX",
+  tokenAmount: 100000, // In PEPE
+  stxAmount: 1.5, // In STX
+  gasFee: 10000, // In uSTX
+  mnemonic: process.env.MNEMONIC,
+});
+
+// Order Management
+await sdk.submitBid({
+  swapId: 12,
+  gasFee: 10000,
+  mnemonic: process.env.MNEMONIC,
+});
+await sdk.submitAsk({
+  swapId: 5,
+  gasFee: 10000,
+  mnemonic: process.env.MNEMONIC,
+});
+await sdk.cancelBid({
+  swapId: 13,
+  gasFee: 10000,
+  mnemonic: process.env.MNEMONIC,
+});
+await sdk.cancelAsk({
+  swapId: 13,
+  gasFee: 10000,
+  mnemonic: process.env.MNEMONIC,
+});
+
+// Price Updates
+await sdk.repriceBid({
+  swapId: 1,
+  newTokenAmount: 150000,
+  pair: "PEPE-STX",
+  gasFee: 10000,
+  mnemonic: process.env.MNEMONIC,
+});
+
+await sdk.repriceAsk({
+  swapId: 4,
+  newStxAmount: 2.5,
+  pair: "PEPE-STX",
+  gasFee: 10000,
+  mnemonic: process.env.MNEMONIC,
+});
+
+// Get Order Details
+const bidDetails = await sdk.getBid(0);
+const askDetails = await sdk.getAsk(1);
 ```
 
-## API Reference
+## Example Tools & Documentation
 
-### `JingcashSDK`
+The SDK comes with a suite of command-line tools demonstrating its usage. Check out [agent-tools-ts](https://github.com/aibtcdev/agent-tools-ts) for examples:
 
-#### Constructor
+### Market Data Tools
 
-```typescript
-new JingcashSDK({
-  API_HOST: string;  // Jing.Cash API endpoint
-  API_KEY: string;   // API key for authentication
-})
-```
+- `get-market.ts`: Live order book for a trading pair
+- `get-private-offers.ts`: View offers sent to your address
+- `get-user-offers.ts`: Track your open orders
+- `get-pending-orders.ts`: Monitor all pending orders
 
-#### Methods
+### Trading Scripts
 
-##### `getOrderBook(pair: string): Promise<OrderBook>`
+- `bid.ts`/`ask.ts`: Create new orders
+- `submit-bid.ts`/`submit-ask.ts`: Submit to existing orders
+- `cancel-bid.ts`/`cancel-ask.ts`: Cancel existing orders
+- `reprice-bid.ts`/`reprice-ask.ts`: Update order prices
+- `get-bid.ts`/`get-ask.ts`: Get order details
 
-Get the order book for a trading pair.
+## Contributing
 
-- `pair`: Trading pair identifier (e.g., "PEPE-STX")
-- Returns: Promise resolving to an OrderBook object containing bids and asks
-
-##### `getPrivateOffers(pair: string, userAddress: string, ftContract: string): Promise<PrivateOffersResponse>`
-
-Get private offers for a specific user.
-
-- `pair`: Trading pair identifier
-- `userAddress`: Stacks address of the user
-- `ftContract`: Token contract
-- Returns: Promise resolving to private bids and asks
-
-##### `getUserOffers(pair: string, userAddress: string, ftContract: string): Promise<UserOffersResponse>`
-
-Get all offers for a specific user.
-
-- `pair`: Trading pair identifier
-- `userAddress`: Stacks address of the user
-- `ftContract`: Token contract
-- Returns: Promise resolving to user's bids and asks
-
-## Types
-
-```typescript
-interface OrderBook {
-  bids: StacksBid[];
-  asks: StxAsk[];
-}
-
-interface PrivateOffersResponse {
-  privateBids: StacksBid[];
-  privateAsks: StxAsk[];
-}
-
-interface UserOffersResponse {
-  userBids: StacksBid[];
-  userAsks: StxAsk[];
-}
-```
-
-## Example Tools
-
-Check out [agent-tools-ts](https://github.com/aibtcdev/agent-tools-ts) for example command-line tools using this SDK:
-
-- `get-market.ts`: Get current order book for a trading pair
-- `get-private-offers.ts`: Get private offers for a specific user
-- `get-user-offers.ts`: Get all offers for a specific user
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
@@ -127,3 +146,7 @@ MIT
 ## Author
 
 Rapha.btc
+
+```
+
+```
