@@ -1,4 +1,3 @@
-Let me give you the entire README in a single code block for easy copying:
 
 ````
 # @jingcash/core-sdk
