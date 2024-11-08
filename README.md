@@ -1,6 +1,4 @@
-
-````
-# @jingcash/core-sdk
+## @jingcash/core-sdk
 
 SDK for interacting with [Jing.Cash](https://app.jing.cash) DEX (Decentralized Exchange) on Stacks.
 
