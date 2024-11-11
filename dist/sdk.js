@@ -752,5 +752,31 @@ class JingCashSDK {
             throw error;
         }
     }
+    async getAvailableMarkets() {
+        const marketPromises = Object.entries(constants_1.TokenMap).map(async ([symbol, contract]) => {
+            return {
+                pair: `${symbol}-STX`,
+                baseToken: {
+                    symbol,
+                    contract,
+                },
+                quoteToken: {
+                    symbol: "STX",
+                    contract: "STX",
+                },
+                status: "active",
+            };
+        });
+        const markets = await Promise.all(marketPromises);
+        return markets.sort((a, b) => a.pair.localeCompare(b.pair));
+    }
+    async getMarket(pair) {
+        const markets = await this.getAvailableMarkets();
+        return markets.find((market) => market.pair === pair) || null;
+    }
+    async isValidPair(pair) {
+        const markets = await this.getAvailableMarkets();
+        return markets.some((market) => market.pair === pair);
+    }
 }
 exports.JingCashSDK = JingCashSDK;

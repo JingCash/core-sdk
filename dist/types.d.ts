@@ -92,3 +92,15 @@ export interface DisplayBid extends StacksBid {
     displayPrice: string;
 }
 export type FormattedOrder = DisplayOrder | DisplayBid;
+export type Market = {
+    pair: string;
+    baseToken: {
+        symbol: string;
+        contract: string;
+    };
+    quoteToken: {
+        symbol: string;
+        contract: string;
+    };
+    status: "active" | "inactive";
+};

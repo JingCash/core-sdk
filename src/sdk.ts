@@ -28,6 +28,7 @@ import type {
   DisplayOrder,
   DisplayBid,
   SwapDetails,
+  Market,
 } from "./types";
 import {
   getTokenInfo,
@@ -40,7 +41,7 @@ import {
   calculateAskFees,
   getTokenInfoFromContract,
 } from "./token-utils";
-import { JING_CONTRACTS, STX_DECIMALS } from "./constants";
+import { JING_CONTRACTS, STX_DECIMALS, TokenMap } from "./constants";
 import {
   NetworkType,
   validateNetwork,
@@ -1308,5 +1309,37 @@ export class JingCashSDK {
       );
       throw error;
     }
+  }
+
+  async getAvailableMarkets(): Promise<Market[]> {
+    const marketPromises = Object.entries(TokenMap).map(
+      async ([symbol, contract]): Promise<Market> => {
+        return {
+          pair: `${symbol}-STX`,
+          baseToken: {
+            symbol,
+            contract,
+          },
+          quoteToken: {
+            symbol: "STX",
+            contract: "STX",
+          },
+          status: "active",
+        };
+      }
+    );
+
+    const markets = await Promise.all(marketPromises);
+    return markets.sort((a, b) => a.pair.localeCompare(b.pair));
+  }
+
+  async getMarket(pair: string): Promise<Market | null> {
+    const markets = await this.getAvailableMarkets();
+    return markets.find((market) => market.pair === pair) || null;
+  }
+
+  async isValidPair(pair: string): Promise<boolean> {
+    const markets = await this.getAvailableMarkets();
+    return markets.some((market) => market.pair === pair);
   }
 }

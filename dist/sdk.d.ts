@@ -1,4 +1,4 @@
-import type { JingSDKConfig, OrderBook, PrivateOffersResponse, UserOffersResponse, DisplayOrder, DisplayBid, SwapDetails } from "./types";
+import type { JingSDKConfig, OrderBook, PrivateOffersResponse, UserOffersResponse, DisplayOrder, DisplayBid, SwapDetails, Market } from "./types";
 export declare class JingCashSDK {
     private readonly API_HOST;
     private readonly API_KEY;
@@ -214,4 +214,7 @@ export declare class JingCashSDK {
             name: string;
         };
     }) | null>;
+    getAvailableMarkets(): Promise<Market[]>;
+    getMarket(pair: string): Promise<Market | null>;
+    isValidPair(pair: string): Promise<boolean>;
 }
