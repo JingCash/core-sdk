@@ -33,6 +33,36 @@ ACCOUNT_INDEX=0
 - Automatic token decimal handling
 - Comprehensive post-conditions for safe execution
 - Detailed console output with unit conversion
+- Market discovery and validation
+
+## Market Discovery
+
+```typescript
+// Get all available trading pairs
+const markets = await sdk.getAvailableMarkets();
+// Example Response:
+// [
+//   {
+//     pair: "WELSH-STX",
+//     baseToken: {
+//       symbol: "WELSH",
+//       contract: "SP3NE50GEXFG9SZGTT51P40X2CKYSZ5CC4ZTZ7A2G.welshcorgicoin-token::welshcorgicoin"
+//     },
+//     quoteToken: {
+//       symbol: "STX",
+//       contract: "STX"
+//     },
+//     status: "active"
+//   },
+//   // ... more markets
+// ]
+
+// Get specific market details
+const welshMarket = await sdk.getMarket("WELSH-STX");
+
+// Validate trading pair
+const isValid = await sdk.isValidPair("WELSH-STX"); // returns boolean
+```
 
 ## Usage
 
